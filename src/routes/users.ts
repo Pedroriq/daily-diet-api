@@ -31,5 +31,13 @@ export async function usersRoutes(app: FastifyInstance) {
     if (existEmail) {
       return reply.status(401).send({ message: 'User already exists' })
     }
+
+    await knex('users').insert({
+      id: randomUUID(),
+      first_name: firstName,
+      last_name: lastName,
+      email,
+      created_at: new Date(),
+    })
   })
 }
