@@ -40,5 +40,13 @@ export async function usersRoutes(app: FastifyInstance) {
       email,
       created_at: new Date(),
     })
+
+    return reply.status(201).send()
+  })
+
+  app.get('/', async () => {
+    const users = await knex('users').select()
+
+    return users
   })
 }
