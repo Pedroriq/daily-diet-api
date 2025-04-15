@@ -48,7 +48,9 @@ export async function mealsRoutes(app: FastifyInstance) {
 
       const { mealId } = getMealsParamsSchema.parse(request.params)
 
-      const meal = await knex('meals').where({ id: mealId }).first()
+      const meal = await knex('meals')
+        .where({ id: mealId, user_id: request.user?.id })
+        .first()
 
       if (!meal) {
         return reply.status(404).send({ error: 'Meal not found' })
@@ -79,14 +81,16 @@ export async function mealsRoutes(app: FastifyInstance) {
         request.body,
       )
 
-      const meal = await knex('meals').where({ id: mealId }).first()
+      const meal = await knex('meals')
+        .where({ id: mealId, user_id: request.user?.id })
+        .first()
 
       if (!meal) {
         return reply.status(404).send({ error: 'Meal not found' })
       }
 
       await knex('meals')
-        .where({ id: mealId })
+        .where({ id: mealId, user_id: request.user?.id })
         .update({ name, description, date, diet })
 
       return reply.status(201).send()
@@ -103,15 +107,66 @@ export async function mealsRoutes(app: FastifyInstance) {
 
       const { mealId } = getMealsParamsSchema.parse(request.params)
 
-      const meal = await knex('meals').where({ id: mealId }).first()
+      const meal = await knex('meals')
+        .where({ id: mealId, user_id: request.user?.id })
+        .first()
 
       if (!meal) {
         return reply.status(404).send({ error: 'Meal not found!' })
       }
 
-      await knex('meals').where({ id: mealId }).first().delete()
+      await knex('meals')
+        .where({ id: mealId, user_id: request.user?.id })
+        .first()
+        .delete()
 
       return reply.status(204).send()
+    },
+  )
+  app.get(
+    '/metrics',
+    { preHandler: checkSessionIdExists },
+    async (request, reply) => {
+      const totalMeals = await knex('meals')
+        .where({ user_id: request.user?.id })
+        .orderBy('date', 'desc')
+
+      const dietMeals = await knex('meals')
+        .where({
+          user_id: request.user?.id,
+          diet: true,
+        })
+        .count('id', { as: 'total diet' })
+        .first()
+
+      const notDietMeals = await knex('meals')
+        .where({
+          user_id: request.user?.id,
+          diet: false,
+        })
+        .count('id', { as: 'total not diet' })
+        .first()
+
+      let sequence = 0
+      let biggestSequence = 0
+
+      for (const meal in totalMeals) {
+        if (totalMeals[meal].diet) {
+          sequence += 1
+          if (sequence > biggestSequence) {
+            biggestSequence = sequence
+          }
+        } else {
+          sequence = 0
+        }
+      }
+
+      return reply.send({
+        totalMeals: totalMeals.length,
+        totalDiets: dietMeals?.['total diet'],
+        totalNotDiets: notDietMeals?.['total not diet'],
+        sequenceMeals: biggestSequence,
+      })
     },
   )
 }
