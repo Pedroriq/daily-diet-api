@@ -203,4 +203,65 @@ describe('Meals routes', () => {
       .set('Cookie', cookies || [])
       .expect(204)
   })
+
+  it('should display all metrics from user', async () => {
+    const createUser = await request(app.server).post('/users').send({
+      firstName: 'Douglas',
+      lastName: 'da Silva',
+      email: 'douglasdasilva@orkut.com.br',
+    })
+
+    const cookies = createUser.get('Set-Cookie')
+
+    await request(app.server)
+      .post('/meals')
+      .set('Cookie', cookies || [])
+      .send({
+        name: 'Canjica',
+        description: 'Canjica da escola',
+        date: '2025-04-16 8:00:00',
+        diet: true,
+      })
+
+    await request(app.server)
+      .post('/meals')
+      .set('Cookie', cookies || [])
+      .send({
+        name: 'Pamonha',
+        description: 'Pamonha da vó',
+        date: '2025-04-16 9:00:00',
+        diet: false,
+      })
+
+    await request(app.server)
+      .post('/meals')
+      .set('Cookie', cookies || [])
+      .send({
+        name: 'Beterraba em pó',
+        description: 'Um pequena porção de beterraba em pó dissolvido na água',
+        date: '2025-04-17 10:00:00',
+        diet: true,
+      })
+
+    await request(app.server)
+      .post('/meals')
+      .set('Cookie', cookies || [])
+      .send({
+        name: 'Suco diet',
+        description: 'Suco para emagrecimento',
+        date: '2025-04-17 10:00:00',
+        diet: true,
+      })
+
+    const metrics = await request(app.server)
+      .get('/meals/metrics')
+      .set('Cookie', cookies || [])
+
+    expect(metrics.body).toEqual({
+      totalMeals: 4,
+      totalDiets: 3,
+      totalNotDiets: 1,
+      sequenceMeals: 2,
+    })
+  })
 })
